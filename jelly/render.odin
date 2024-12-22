@@ -14,6 +14,13 @@ RenderState :: struct {
     clear_color:                                                 u32,
 }
 
+render_init :: proc() {
+    render: ^RenderState = &ctx.render
+    render_init_quad(&render.vao_quad, &render.vbo_quad, &render.ebo_quad)
+    render_init_shaders(render)
+    render_init_color_texture(&render.texture_color)
+}
+
 render_begin :: proc() {
     clear_color := hex_to_gl(ctx.render.clear_color)
     gl.ClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w)
@@ -77,10 +84,10 @@ render_init_window :: proc(title: string, width, height: i32) -> ^SDL.Window {
     SDL.GL_MakeCurrent(window, gl_context)
     gl.load_up_to(3, 3, SDL.gl_set_proc_address)
 
-    fmt.println("OpenGL loaded successfully")
-    fmt.println("OpenGL Version: ", gl.GetString(gl.VERSION))
-    fmt.println("OpenGL Renderer: ", gl.GetString(gl.RENDERER))
-    fmt.println("OpenGL Vendor: ", gl.GetString(gl.VENDOR))
+    fmt.println("\033[36mOpenGL loaded successfully\033[0m")
+    fmt.println("\tVersion: ", gl.GetString(gl.VERSION))
+    fmt.println("\tVendor: ", gl.GetString(gl.VENDOR))
+    fmt.println("\tRenderer: ", gl.GetString(gl.RENDERER))
 
     return window
 }
@@ -215,8 +222,16 @@ render_shader_create :: proc(vert_path, frag_path: string) -> u32 {
     success: i32
     log: u8
 
-    vert_data := io_read_file(vert_path)
-    frag_data := io_read_file(frag_path)
+    vert_data, vert_ok := io_read_file(vert_path)
+    if !vert_ok {
+        fmt.eprintln("Failed to read vertex shader file: ", vert_path)
+        os.exit(1)
+    }
+    frag_data, frag_ok := io_read_file(frag_path)
+    if !frag_ok {
+        fmt.eprintln("Failed to read fragment shader file: ", frag_path)
+        os.exit(1)
+    }
 
     vert_src := cstring(raw_data(vert_data))
     frag_src := cstring(raw_data(frag_data))
